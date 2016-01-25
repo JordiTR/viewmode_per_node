@@ -1,0 +1,28 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function viewmode_per_node_schema() {
+  $schema['viewmode_per_node'] = array(
+    'description' => 'Data for the view mode per node module.',
+    'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The NID of the node.',
+      ),
+      'viewmode' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The view mode related to that node.',
+      ),
+    ),
+    'primary key' => array('nid'),
+  );
+
+  return $schema;
+}

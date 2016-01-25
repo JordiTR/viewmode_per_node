@@ -1,0 +1,124 @@
+<?php
+
+/**
+ * Implements hook_permission().
+ */
+function viewmode_per_node_permission() {
+  return array(
+    'access view mode per node' => array(
+      'title' => t('Access view mode per node'),
+      'description' => t('Access the view mode per mode edition.'),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_form_alter().
+ * 
+ * Adds a tab on edition area to handle that value.
+ */
+function viewmode_per_node_form_alter(&$form, $form_state, $form_id) {
+  if (!empty($form['#node_edit_form'])) {
+    $node = $form['#node']; 
+    $entity_info = entity_get_info();
+    $view_modes = array();
+    if (!empty($entity_info['node']['view modes'])) {
+      $view_modes = array_keys($entity_info['node']['view modes']);
+      foreach ($view_modes as $key => $value) { 
+        $modes_list[$value] = $value;
+      }
+    }
+
+    $form['viewmode_per_node'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'View Mode per Node',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#group' => 'additional_settings',
+      '#attributes' => array(
+        'class' => array('viewmode-per-node-node-type-settings-form'),
+      ),
+      '#description' => t('Display this node with this view mode style.'),
+    );
+    $form['viewmode_per_node']['viewmode_type'] = array(
+      '#type' => 'select',
+      '#title' => t('View modes'),
+      '#options' => $modes_list,
+      '#multiple' => FALSE,  
+      '#default_value' => isset($node->viewmode_per_node) ? $node->viewmode_per_node : '',
+    );
+  }
+}
+
+/**
+ * Implements hook_node_load().
+ * 
+ * Añade el valor del campo manejado en este módulo al objeto $node
+ */
+function viewmode_per_node_node_load($nodes, $types) {
+  foreach ($nodes as $node) {
+    $node->viewmode_per_node = viewmode_per_node_current_viewmode($node->nid);      
+  }
+}
+
+/**
+ * Implements hook_entity_view_mode_alter().
+ * 
+ * This is the module that performs all the magic,
+ * note that this hook requieres drupal >= 7.17
+ */
+function viewmode_per_node_entity_view_mode_alter(&$view_mode, $context) {
+  if ($context['entity_type'] == 'node' && $context['entity']->viewmode_per_node != '') {
+    $view_mode = $context['entity']->viewmode_per_node;
+  }
+}
+
+/**
+ * Implements hook_node_delete().
+ */
+function viewmode_per_node_node_delete($node) {
+  db_delete('viewmode_per_node')
+    ->condition('nid', $node->nid)
+    ->execute();
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function viewmode_per_node_node_insert($node) {
+  $data = array(
+    'nid' => $node->nid,
+    'viewmode' => $node->viewmode_type,
+  );
+  drupal_write_record('viewmode_per_node', $data);
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function viewmode_per_node_node_update($node) {
+  // retrieving value if exists
+  $registered_viewmode = viewmode_per_node_current_viewmode($node->nid);
+  
+  if ($registered_viewmode == '') {
+    // if we are editing previos nodes without value insert data on DB
+    viewmode_per_node_node_insert($node);
+  } else {
+    // if there is already a value update it
+    db_update('viewmode_per_node')
+      ->condition('nid', $node->nid)
+      ->fields(array('viewmode' => $node->viewmode_type))
+      ->execute();
+  }
+}
+
+/**
+ * Retrives the value on that database if exists.
+ */
+function viewmode_per_node_current_viewmode($nid) {
+  $data = db_query("SELECT viewmode FROM {viewmode_per_node}
+            WHERE nid = :nid", array(':nid' => $nid))->fetchObject();
+  
+  $viewmode = isset($data->viewmode) ? $data->viewmode : '';
+  return $viewmode;
+}

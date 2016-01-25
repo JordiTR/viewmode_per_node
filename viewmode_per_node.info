@@ -1,0 +1,9 @@
+name = View Mode per Node
+description = Provides a tab which allows to select in which view mode render the node
+dependencies[] = entity_view_mode
+core = 7.x
+version = 1.0.2
+package = Fields
+
+files[] = viewmode_per_node.install
+files[] = viewmode_per_node.module
